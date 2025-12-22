@@ -1,5 +1,10 @@
 # ncm-rs
 
+English | [简体中文](../../README.md)
+
+[![API Status](https://github.com/cloud370/ncm-rs/actions/workflows/daily_check.yml/badge.svg)](../../API_STATUS.md)
+[View API Daily Availability Report](../../API_STATUS.md)
+
 A high-performance, cross-platform Netease Cloud Music API implementation written in Rust. 
 
 It acts as a lightweight, efficient alternative to the Node.js version, capable of running as a standalone HTTP Proxy Server or being integrated as a Rust Library.
@@ -19,7 +24,7 @@ Start the server to expose a generic proxy endpoint. This endpoint accepts reque
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-repo/ncm-rs.git
+git clone https://github.com/cloud370/ncm-rs.git
 cd ncm-rs
 
 # Run the server (default port: 3331)
@@ -75,7 +80,7 @@ curl -X POST http://localhost:3331/proxy \
 
 ## Usage as a Rust Library
 
-You can integrate `ncm-rs` directly into your Rust application. For more advanced usage, check the [examples](./examples) directory.
+You can integrate `ncm-rs` directly into your Rust application. For more advanced usage, check the [examples](../../examples) directory.
 
 ### Installation
 
@@ -83,7 +88,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ncm-rs = { git = "https://github.com/your-repo/ncm-rs.git" }
+ncm-rs = { git = "https://github.com/cloud370/ncm-rs.git" }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", features = ["json"] }
@@ -122,10 +127,10 @@ async fn main() {
 
 ### More Examples
 
-Detailed examples can be found in the [examples](./examples) directory:
-- [Cloud Search](./examples/cloud_search.rs): Search for songs, artists, etc.
-- [Playlist Details](./examples/playlist_detail.rs): Get full details of a playlist.
-- [Song URL](./examples/song_url.rs): Get download/playback URLs for songs.
+Detailed examples can be found in the [examples](../../examples) directory:
+- [Cloud Search](../../examples/cloud_search.rs): Search for songs, artists, etc.
+- [Playlist Details](../../examples/playlist_detail.rs): Get full details of a playlist.
+- [Song URL](../../examples/song_url.rs): Get download/playback URLs for songs.
 
 ## Project Structure
 
@@ -137,7 +142,7 @@ Detailed examples can be found in the [examples](./examples) directory:
 
 ## License
 
-This project is licensed under the [MIT License](../LICENSE).
+This project is licensed under the [MIT License](../../LICENSE).
 
 ## Disclaimer
 

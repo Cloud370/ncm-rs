@@ -2,9 +2,12 @@
 
 [English](./doc/en/README.md) | 简体中文
 
+[![API Status](https://github.com/cloud370/ncm-rs/actions/workflows/daily_check.yml/badge.svg)](./API_STATUS.md)
+[查看 API 每日可用性报告](./API_STATUS.md)
+
 使用 Rust 编写的高性能、跨平台网易云音乐 API 实现。
 
-它是 Node.js 版本的轻量级、高效替代方案，既可以作为独立的 HTTP 代理服务器运行，也可以作为 Rust 库集成到项目中。
+它可以作为独立的 HTTP 代理服务器运行，也可以作为 Rust 库集成到项目中。
 
 ## 特性
 
@@ -21,7 +24,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-repo/ncm-rs.git
+git clone https://github.com/cloud370/ncm-rs.git
 cd ncm-rs
 
 # 运行服务器（默认端口：3331）
@@ -85,7 +88,7 @@ curl -X POST http://localhost:3331/proxy \
 
 ```toml
 [dependencies]
-ncm-rs = { git = "https://github.com/your-repo/ncm-rs.git" }
+ncm-rs = { git = "https://github.com/cloud370/ncm-rs.git" }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", features = ["json"] }
