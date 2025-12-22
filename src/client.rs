@@ -1,12 +1,12 @@
 use crate::error::NcmError;
 use crate::types::CryptoType;
 use crate::utils::crypto;
+use rand::Rng;
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE, REFERER, USER_AGENT};
-use reqwest::{Client, Method, Url, Proxy};
-use serde_json::{Value, json};
+use reqwest::{Client, Method, Proxy, Url};
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use rand::Rng;
 use tracing::info;
 
 const BASE_URL: &str = "https://music.163.com";
@@ -33,9 +33,7 @@ impl NcmClient {
             builder = builder.proxy(proxy_obj);
         }
 
-        let client = builder
-            .build()
-            .map_err(NcmError::Http)?;
+        let client = builder.build().map_err(NcmError::Http)?;
 
         Ok(Self {
             client,
@@ -52,13 +50,16 @@ impl NcmClient {
         crypto_type: CryptoType,
     ) -> Result<Value, NcmError> {
         let mut params_to_encrypt = params.clone();
-        
+
         let real_crypto_type = match crypto_type {
             CryptoType::Auto => {
                 // 1. Check if crypto is specified in params
                 let mut detected_crypto = None;
                 if let Value::Object(ref mut map) = params_to_encrypt {
-                    if let Some(c) = map.remove("crypto").and_then(|v| v.as_str().map(|s| s.to_string())) {
+                    if let Some(c) = map
+                        .remove("crypto")
+                        .and_then(|v| v.as_str().map(|s| s.to_string()))
+                    {
                         detected_crypto = match c.to_lowercase().as_str() {
                             "weapi" => Some(CryptoType::Weapi),
                             "linuxapi" => Some(CryptoType::Linuxapi),
@@ -90,7 +91,7 @@ impl NcmClient {
                     } else if path.starts_with("/api/linux/") {
                         CryptoType::Linuxapi
                     } else {
-                        // Default to Weapi for /api/ and others if not specified, 
+                        // Default to Weapi for /api/ and others if not specified,
                         // similar to typical Node.js behavior which assumes PC/Weapi by default.
                         CryptoType::Weapi
                     }
@@ -104,14 +105,18 @@ impl NcmClient {
             let url = if path.starts_with("http://") || path.starts_with("https://") {
                 Url::parse(path).map_err(|e| NcmError::Unknown(e.to_string()))?
             } else {
-                self.api_url.join(path.trim_start_matches('/'))
+                self.api_url
+                    .join(path.trim_start_matches('/'))
                     .map_err(|e| NcmError::Unknown(e.to_string()))?
             };
 
             // Inject header
             let mut new_params = params_to_encrypt.clone();
             if let Value::Object(ref mut map) = new_params {
-                let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis();
                 let mut rng = rand::thread_rng();
                 let random_num = rng.gen_range(0..1000);
                 let request_id = format!("{}_{:04}", now, random_num);
@@ -133,7 +138,9 @@ impl NcmClient {
             }
             (url, new_params)
         } else {
-            let url = self.base_url.join(path)
+            let url = self
+                .base_url
+                .join(path)
                 .map_err(|e| NcmError::Unknown(e.to_string()))?;
             (url, params_to_encrypt)
         };
@@ -250,7 +257,7 @@ impl NcmClient {
             // If the user gets "EOF while parsing a value", it means the response body is empty or invalid JSON.
             // Wait, if it is EAPI, the response body IS encrypted.
             // We need to decrypt it if it's not a standard JSON error.
-            
+
             if let Ok(res) = serde_json::from_str::<Value>(&text) {
                 return Ok(res);
             }
@@ -259,7 +266,7 @@ impl NcmClient {
             // EAPI responses are often hex encoded strings in the body, OR raw bytes.
             // If text() succeeded, it might be hex.
             if let Ok(decrypted_val) = crypto::eapi_res_decrypt(&text) {
-                 return Ok(decrypted_val);
+                return Ok(decrypted_val);
             }
         }
 

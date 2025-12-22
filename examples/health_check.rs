@@ -1,4 +1,4 @@
-use ncm_rs::{NcmClient, types::CryptoType};
+use ncm_rs::{types::CryptoType, NcmClient};
 use reqwest::Method;
 use serde_json::json;
 use std::{thread, time::Duration};
@@ -45,16 +45,18 @@ async fn check_api() -> bool {
         "type": 1,
         "limit": 1,
         "offset": 0,
-        "total": true 
+        "total": true
     });
 
     // Use /weapi/cloudsearch/pc as it is a common endpoint
-    let result = client.request(
-        Method::POST,
-        "/weapi/cloudsearch/pc",
-        params,
-        CryptoType::Auto
-    ).await;
+    let result = client
+        .request(
+            Method::POST,
+            "/weapi/cloudsearch/pc",
+            params,
+            CryptoType::Auto,
+        )
+        .await;
 
     match result {
         Ok(res) => {
@@ -62,17 +64,21 @@ async fn check_api() -> bool {
             if let Some(code) = res.get("code").and_then(|c| c.as_i64()) {
                 if code == 200 {
                     // Also check if we got any result to be sure
-                    if let Some(songs) = res.get("result").and_then(|r| r.get("songs")).and_then(|s| s.as_array()) {
+                    if let Some(songs) = res
+                        .get("result")
+                        .and_then(|r| r.get("songs"))
+                        .and_then(|s| s.as_array())
+                    {
                         if !songs.is_empty() {
                             println!("Successfully fetched search results.");
                             return true;
                         } else {
                             println!("Request 200 OK but no songs found (might be valid but suspicious for 'Fade').");
-                             // Still count as success for connectivity? Yes, probably.
-                             return true;
+                            // Still count as success for connectivity? Yes, probably.
+                            return true;
                         }
                     }
-                     // If result structure is different but code is 200, it might still be OK.
+                    // If result structure is different but code is 200, it might still be OK.
                     return true;
                 } else {
                     eprintln!("API returned status code: {}", code);

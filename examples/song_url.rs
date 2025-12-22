@@ -1,4 +1,4 @@
-use ncm_rs::{NcmClient, types::CryptoType};
+use ncm_rs::{types::CryptoType, NcmClient};
 use reqwest::Method;
 use serde_json::json;
 
@@ -9,7 +9,7 @@ async fn main() {
     // Song URL API
     // /eapi/song/enhance/player/url
     // /eapi/song/enhance/player/url/v1
-    
+
     // Song ID for "海阔天空" (Beyond): 347230
     let song_ids = vec![347230];
     let level = "standard"; // standard, higher, exhigh, lossless, hires
@@ -23,12 +23,14 @@ async fn main() {
     });
 
     // Use /eapi/song/enhance/player/url/v1 which is commonly used in mobile app
-    let result = client.request(
-        Method::POST,
-        "/eapi/song/enhance/player/url/v1",
-        params,
-        CryptoType::Eapi
-    ).await;
+    let result = client
+        .request(
+            Method::POST,
+            "/eapi/song/enhance/player/url/v1",
+            params,
+            CryptoType::Eapi,
+        )
+        .await;
 
     match result {
         Ok(res) => {
@@ -38,14 +40,17 @@ async fn main() {
                     let url = item.get("url").and_then(|u| u.as_str()).unwrap_or("No URL");
                     let br = item.get("br").and_then(|v| v.as_i64()).unwrap_or(0);
                     let size = item.get("size").and_then(|v| v.as_i64()).unwrap_or(0);
-                    
+
                     println!("Song ID: {}", id);
                     println!("URL: {}", url);
                     println!("Bitrate: {}", br);
                     println!("Size: {}", size);
                 }
             } else {
-                 println!("Response (Full): {}", serde_json::to_string_pretty(&res).unwrap());
+                println!(
+                    "Response (Full): {}",
+                    serde_json::to_string_pretty(&res).unwrap()
+                );
             }
         }
         Err(e) => {
