@@ -1,3 +1,3 @@
-# API Status
+# API 状态
 
-Status: ❓ Unknown (Waiting for first check)
+状态: ❓ 未知 (等待首次检查)

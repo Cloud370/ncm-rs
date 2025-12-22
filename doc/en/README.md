@@ -2,8 +2,8 @@
 
 English | [简体中文](../../README.md)
 
-[![API Status](https://github.com/cloud370/ncm-rs/actions/workflows/daily_check.yml/badge.svg)](../../API_STATUS.md)
-[View API Daily Availability Report](../../API_STATUS.md)
+[![API Status](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cloud370/ncm-rs/master/api-status.json)](./API_STATUS.md)
+[View API Daily Availability Report](./API_STATUS.md)
 
 A high-performance, cross-platform Netease Cloud Music API implementation written in Rust. 
 

@@ -27,20 +27,52 @@ jobs:
         continue-on-error: true
         run: cargo run --example health_check
 
-      - name: Update Status File
+      - name: Update Status Files
         if: always()
         run: |
-          echo "# API Status" > API_STATUS.md
-          echo "" >> API_STATUS.md
-          echo "Last check: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> API_STATUS.md
-          echo "" >> API_STATUS.md
+          # Get current date
+          CURRENT_DATE=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          
+          # Determine status and color
           if [ "${{ steps.check.outcome }}" == "success" ]; then
-            echo "Status: ✅ Available" >> API_STATUS.md
+            STATUS_EN="Available"
+            STATUS_CN="可用"
+            ICON="✅"
+            COLOR="success"
           else
-            echo "Status: ❌ Unavailable" >> API_STATUS.md
+            STATUS_EN="Unavailable"
+            STATUS_CN="不可用"
+            ICON="❌"
+            COLOR="critical"
           fi
+          
+          # Generate JSON for Shields.io endpoint
+          echo "{" > api-status.json
+          echo "  \"schemaVersion\": 1," >> api-status.json
+          echo "  \"label\": \"API Status\"," >> api-status.json
+          echo "  \"message\": \"$STATUS_EN\"," >> api-status.json
+          echo "  \"color\": \"$COLOR\"" >> api-status.json
+          echo "}" >> api-status.json
+          
+          # Update Root API_STATUS.md (Chinese)
+          echo "# API 状态" > API_STATUS.md
           echo "" >> API_STATUS.md
-          echo "This status is automatically updated by GitHub Actions." >> API_STATUS.md
+          echo "上次检查: $CURRENT_DATE" >> API_STATUS.md
+          echo "" >> API_STATUS.md
+          echo "状态: $ICON $STATUS_CN" >> API_STATUS.md
+          echo "" >> API_STATUS.md
+          echo "此状态由 GitHub Actions 自动更新。" >> API_STATUS.md
+          
+          # Update doc/en/API_STATUS.md (English)
+          # Ensure directory exists (it should, but good to be safe)
+          mkdir -p doc/en
+          echo "# API Status" > doc/en/API_STATUS.md
+          echo "" >> doc/en/API_STATUS.md
+          echo "Last check: $CURRENT_DATE" >> doc/en/API_STATUS.md
+          echo "" >> doc/en/API_STATUS.md
+          echo "Status: $ICON $STATUS_EN" >> doc/en/API_STATUS.md
+          echo "" >> doc/en/API_STATUS.md
+          echo "This status is automatically updated by GitHub Actions." >> doc/en/API_STATUS.md
 
       - name: Commit and Push
         if: always()
@@ -49,7 +81,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add API_STATUS.md
+          git add API_STATUS.md doc/en/API_STATUS.md api-status.json
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
