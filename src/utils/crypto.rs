@@ -8,7 +8,6 @@ use ecb::Decryptor as EcbDecryptor;
 use ecb::Encryptor as EcbEncryptor;
 use num_bigint_dig::BigUint;
 use rand::Rng;
-use rsa::{pkcs8::DecodePublicKey, traits::PublicKeyParts, RsaPublicKey};
 use serde::{Deserialize, Serialize};
 use std::str;
 use thiserror::Error;
@@ -18,7 +17,11 @@ const IV: &[u8] = b"0102030405060708";
 const PRESET_KEY: &[u8] = b"0CoJUm6Qyw8W8jud";
 const LINUX_API_KEY: &[u8] = b"rFgB&h#%2?^eDg:Q";
 const BASE62: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-const PUBLIC_KEY_B64: &str = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7clFSs6sXqHauqKWqdtLkF2KexO40H1YTX8z2lSgBBOAxLsvaklV8k4cBFK9snQXE9/DDaFt6Rr7iVZMldczhC0JNgTz+SHXT6CBHuX3e9SdB1Ua44oncaTWz7OBGLbCiK45wIDAQAB";
+// NetEase Public Key Modulus (N) and Exponent (E)
+// Extracted from the standard NetEase public key to avoid dependency on the vulnerable 'rsa' crate (RUSTSEC-2023-0071).
+// The original SPKI DER B64 was: MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDgtQn2JZ34ZC28NWYpAUd98iZ37BUrX/aKzmFbt7clFSs6sXqHauqKWqdtLkF2KexO40H1YTX8z2lSgBBOAxLsvaklV8k4cBFK9snQXE9/DDaFt6Rr7iVZMldczhC0JNgTz+SHXT6CBHuX3e9SdB1Ua44oncaTWz7OBGLbCiK45wIDAQAB
+const RSA_N: &str = "e0b509f6259df8642dbc35662901477df22677ec152b5ff68ace615bb7b725152b3ab17a876aea8a5aa76d2e417629ec4ee341f56135fccf695280104e0312ecbda92557c93870114af6c9d05c4f7f0c3685b7a46bee255932575cce10b424d813cfe4875d3e82047b97ddef52741d546b8e289dc6935b3ece0462db0a22b8e7";
+const RSA_E: &str = "10001";
 const EAPI_KEY: &[u8] = b"e82ckenh8dichen8";
 
 type Aes128CbcEnc = CbcEncryptor<Aes128>;
@@ -48,12 +51,25 @@ pub enum CryptoError {
 /// Helper for AES Encryption
 /// Supports "cbc" and "ecb" modes.
 pub fn aes_encrypt(text: &str, mode: &str, key: &[u8], iv: &[u8]) -> Result<Vec<u8>, CryptoError> {
+    if key.len() != 16 {
+        return Err(CryptoError::EncryptionError(format!(
+            "Invalid key length: {}. Expected 16 bytes.",
+            key.len()
+        )));
+    }
+
     let plaintext = text.as_bytes();
     let len = plaintext.len();
     let mut buffer = vec![0u8; len + 16];
     buffer[..len].copy_from_slice(plaintext);
 
     if mode.eq_ignore_ascii_case("cbc") {
+        if iv.len() != 16 {
+            return Err(CryptoError::EncryptionError(format!(
+                "Invalid IV length: {}. Expected 16 bytes for CBC mode.",
+                iv.len()
+            )));
+        }
         let encryptor = Aes128CbcEnc::new(key.into(), iv.into());
         let ct_len = encryptor
             .encrypt_padded_mut::<Pkcs7>(&mut buffer, len)
@@ -68,7 +84,10 @@ pub fn aes_encrypt(text: &str, mode: &str, key: &[u8], iv: &[u8]) -> Result<Vec<
             .len();
         Ok(buffer[..ct_len].to_vec())
     } else {
-        Err(CryptoError::EncryptionError("Unsupported mode".to_string()))
+        Err(CryptoError::EncryptionError(format!(
+            "Unsupported mode: {}",
+            mode
+        )))
     }
 }
 
@@ -80,9 +99,22 @@ pub fn aes_decrypt(
     iv: &[u8],
     mode: &str,
 ) -> Result<String, CryptoError> {
+    if key.len() != 16 {
+        return Err(CryptoError::DecryptionError(format!(
+            "Invalid key length: {}. Expected 16 bytes.",
+            key.len()
+        )));
+    }
+
     let mut buffer = ciphertext.to_vec();
 
     if mode.eq_ignore_ascii_case("cbc") {
+        if iv.len() != 16 {
+            return Err(CryptoError::DecryptionError(format!(
+                "Invalid IV length: {}. Expected 16 bytes for CBC mode.",
+                iv.len()
+            )));
+        }
         let decryptor = Aes128CbcDec::new(key.into(), iv.into());
         let pt_len = decryptor
             .decrypt_padded_mut::<Pkcs7>(&mut buffer)
@@ -90,8 +122,7 @@ pub fn aes_decrypt(
             .len();
         String::from_utf8(buffer[..pt_len].to_vec())
             .map_err(|e| CryptoError::DecryptionError(e.to_string()))
-    } else {
-        // ECB
+    } else if mode.eq_ignore_ascii_case("ecb") { // Explicit check for ECB
         let decryptor = Aes128EcbDec::new(key.into());
         let pt_len = decryptor
             .decrypt_padded_mut::<Pkcs7>(&mut buffer)
@@ -99,22 +130,25 @@ pub fn aes_decrypt(
             .len();
         String::from_utf8(buffer[..pt_len].to_vec())
             .map_err(|e| CryptoError::DecryptionError(e.to_string()))
+    } else {
+        Err(CryptoError::DecryptionError(format!(
+            "Unsupported mode: {}",
+            mode
+        )))
     }
 }
 
 // RSA Encrypt (NoPadding / Raw)
-fn rsa_encrypt(str: &str, pub_key_b64: &str) -> Result<String, CryptoError> {
-    let der_bytes = BASE64.decode(pub_key_b64)?;
-    let pub_key = RsaPublicKey::from_public_key_der(&der_bytes)
-        .map_err(|e| CryptoError::RsaError(e.to_string()))?;
+fn rsa_encrypt(text: &str) -> Result<String, CryptoError> {
+    let n = BigUint::parse_bytes(RSA_N.as_bytes(), 16)
+        .ok_or_else(|| CryptoError::RsaError("Invalid RSA Modulus".to_string()))?;
+    let e = BigUint::parse_bytes(RSA_E.as_bytes(), 16)
+        .ok_or_else(|| CryptoError::RsaError("Invalid RSA Exponent".to_string()))?;
 
-    let n = pub_key.n();
-    let e = pub_key.e();
-
-    let bytes = str.as_bytes();
+    let bytes = text.as_bytes();
     let m = BigUint::from_bytes_be(bytes);
 
-    let c = m.modpow(e, n);
+    let c = m.modpow(&e, &n);
 
     let c_bytes = c.to_bytes_be();
     // Pad with leading zeros to 128 bytes (256 hex chars) if needed
@@ -152,7 +186,7 @@ pub fn weapi(object: &serde_json::Value) -> Result<WeapiResult, CryptoError> {
     let params = BASE64.encode(&params_bytes);
 
     let reversed_key: String = secret_key.chars().rev().collect();
-    let enc_sec_key = rsa_encrypt(&reversed_key, PUBLIC_KEY_B64)?;
+    let enc_sec_key = rsa_encrypt(&reversed_key)?;
 
     Ok(WeapiResult {
         params,
@@ -227,7 +261,7 @@ pub fn eapi_req_decrypt(encrypted_params: &str) -> Result<EapiReqResult, CryptoE
         let url = parts[0].to_string();
         let data_str = parts[1];
         let data: serde_json::Value =
-            serde_json::from_str(data_str).unwrap_or(serde_json::Value::Null);
+            serde_json::from_str(data_str).map_err(CryptoError::JsonError)?;
         Ok(EapiReqResult { url, data })
     } else {
         Err(CryptoError::InvalidData(
@@ -291,5 +325,52 @@ mod tests {
         // Decrypt
         let dec = aes_decrypt(&enc, key, iv, "ecb").unwrap();
         assert_eq!(text, dec);
+    }
+
+    #[test]
+    fn test_aes_cbc_roundtrip() {
+        let text = "hello world cbc mode";
+        let key = b"1234567812345678";
+        let iv = b"8765432187654321";
+
+        let enc = aes_encrypt(text, "cbc", key, iv).unwrap();
+        let dec = aes_decrypt(&enc, key, iv, "cbc").unwrap();
+        assert_eq!(text, dec);
+    }
+
+    #[test]
+    fn test_aes_invalid_input() {
+        let text = "test";
+        let short_key = b"short";
+        let valid_key = b"1234567812345678";
+        let short_iv = b"short";
+        
+        // Test short key (ECB)
+        let res = aes_encrypt(text, "ecb", short_key, &[]);
+        assert!(res.is_err());
+        match res.unwrap_err() {
+            CryptoError::EncryptionError(msg) => assert!(msg.contains("Invalid key length")),
+            _ => panic!("Unexpected error type"),
+        }
+
+        // Test short key (Decryption)
+        let res = aes_decrypt(&[], short_key, &[], "ecb");
+        assert!(res.is_err());
+        
+        // Test short IV in CBC
+        let res = aes_encrypt(text, "cbc", valid_key, short_iv);
+        assert!(res.is_err());
+        match res.unwrap_err() {
+            CryptoError::EncryptionError(msg) => assert!(msg.contains("Invalid IV length")),
+            _ => panic!("Unexpected error type"),
+        }
+
+        // Test unsupported mode
+        let res = aes_encrypt(text, "invalid", valid_key, &[]);
+        assert!(res.is_err());
+        match res.unwrap_err() {
+            CryptoError::EncryptionError(msg) => assert!(msg.contains("Unsupported mode")),
+            _ => panic!("Unexpected error type"),
+        }
     }
 }
