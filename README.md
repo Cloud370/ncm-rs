@@ -2,7 +2,7 @@
 
 [English](./doc/en/README.md) | 简体中文
 
-[![API Status](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cloud370/ncm-rs/status/api-status.json)](https://github.com/cloud370/ncm-rs/blob/status/API_STATUS.md)
+[![API Status](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/cloud370/ncm-rs/status/api-status.json&style=flat-square&cacheSeconds=600)](https://github.com/cloud370/ncm-rs/blob/status/API_STATUS.md)
 [查看 API 每日可用性报告](https://github.com/cloud370/ncm-rs/blob/status/API_STATUS.md)
 
 使用 Rust 编写的高性能、跨平台网易云音乐 API 实现。

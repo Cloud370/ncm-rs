@@ -32,6 +32,7 @@ jobs:
         run: |
           # Get current date
           CURRENT_DATE=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          SHORT_DATE=$(date -u '+%m-%d %H:%M')
           
           # Determine status and color
           if [ "${{ steps.check.outcome }}" == "success" ]; then
@@ -39,11 +40,13 @@ jobs:
             STATUS_CN="可用"
             ICON="✅"
             COLOR="success"
+            BADGE_MSG="$STATUS_CN | $SHORT_DATE"
           else
             STATUS_EN="Unavailable"
             STATUS_CN="不可用"
             ICON="❌"
             COLOR="critical"
+            BADGE_MSG="$STATUS_CN | $SHORT_DATE"
           fi
           
           # Create a temporary directory for status files
@@ -52,8 +55,8 @@ jobs:
           # Generate JSON for Shields.io endpoint
           echo "{" > status_output/api-status.json
           echo "  \"schemaVersion\": 1," >> status_output/api-status.json
-          echo "  \"label\": \"API Status\"," >> status_output/api-status.json
-          echo "  \"message\": \"$STATUS_EN\"," >> status_output/api-status.json
+          echo "  \"label\": \"API 状态\"," >> status_output/api-status.json
+          echo "  \"message\": \"$BADGE_MSG\"," >> status_output/api-status.json
           echo "  \"color\": \"$COLOR\"" >> status_output/api-status.json
           echo "}" >> status_output/api-status.json
           
