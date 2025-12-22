@@ -46,49 +46,46 @@ jobs:
             COLOR="critical"
           fi
           
+          # Create a temporary directory for status files
+          mkdir -p status_output/doc/en
+          
           # Generate JSON for Shields.io endpoint
-          echo "{" > api-status.json
-          echo "  \"schemaVersion\": 1," >> api-status.json
-          echo "  \"label\": \"API Status\"," >> api-status.json
-          echo "  \"message\": \"$STATUS_EN\"," >> api-status.json
-          echo "  \"color\": \"$COLOR\"" >> api-status.json
-          echo "}" >> api-status.json
+          echo "{" > status_output/api-status.json
+          echo "  \"schemaVersion\": 1," >> status_output/api-status.json
+          echo "  \"label\": \"API Status\"," >> status_output/api-status.json
+          echo "  \"message\": \"$STATUS_EN\"," >> status_output/api-status.json
+          echo "  \"color\": \"$COLOR\"" >> status_output/api-status.json
+          echo "}" >> status_output/api-status.json
           
           # Update Root API_STATUS.md (Chinese)
-          echo "# API 状态" > API_STATUS.md
-          echo "" >> API_STATUS.md
-          echo "上次检查: $CURRENT_DATE" >> API_STATUS.md
-          echo "" >> API_STATUS.md
-          echo "状态: $ICON $STATUS_CN" >> API_STATUS.md
-          echo "" >> API_STATUS.md
-          echo "此状态由 GitHub Actions 自动更新。" >> API_STATUS.md
+          echo "# API 状态" > status_output/API_STATUS.md
+          echo "" >> status_output/API_STATUS.md
+          echo "上次检查: $CURRENT_DATE" >> status_output/API_STATUS.md
+          echo "" >> status_output/API_STATUS.md
+          echo "状态: $ICON $STATUS_CN" >> status_output/API_STATUS.md
+          echo "" >> status_output/API_STATUS.md
+          echo "此状态由 GitHub Actions 自动更新。" >> status_output/API_STATUS.md
           
           # Update doc/en/API_STATUS.md (English)
-          # Ensure directory exists (it should, but good to be safe)
-          mkdir -p doc/en
-          echo "# API Status" > doc/en/API_STATUS.md
-          echo "" >> doc/en/API_STATUS.md
-          echo "Last check: $CURRENT_DATE" >> doc/en/API_STATUS.md
-          echo "" >> doc/en/API_STATUS.md
-          echo "Status: $ICON $STATUS_EN" >> doc/en/API_STATUS.md
-          echo "" >> doc/en/API_STATUS.md
-          echo "This status is automatically updated by GitHub Actions." >> doc/en/API_STATUS.md
+          echo "# API Status" > status_output/doc/en/API_STATUS.md
+          echo "" >> status_output/doc/en/API_STATUS.md
+          echo "Last check: $CURRENT_DATE" >> status_output/doc/en/API_STATUS.md
+          echo "" >> status_output/doc/en/API_STATUS.md
+          echo "Status: $ICON $STATUS_EN" >> status_output/doc/en/API_STATUS.md
+          echo "" >> status_output/doc/en/API_STATUS.md
+          echo "This status is automatically updated by GitHub Actions." >> status_output/doc/en/API_STATUS.md
 
-      - name: Commit and Push
+      - name: Deploy Status
         if: always()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add API_STATUS.md doc/en/API_STATUS.md api-status.json
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Update API status [skip ci]"
-            git pull --rebase --autostash
-            git push
-          fi
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./status_output
+          publish_branch: status
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Update API status [skip ci]'
 
       - name: Check Workflow Status
         if: steps.check.outcome == 'failure'
