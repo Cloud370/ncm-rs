@@ -11,6 +11,7 @@ permissions:
 jobs:
   health-check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,21 +24,26 @@ jobs:
 
       - name: Run Health Check
         id: check
+        continue-on-error: true
         run: cargo run --example health_check
 
       - name: Update Status File
-        if: success()
+        if: always()
         run: |
           echo "# API Status" > API_STATUS.md
           echo "" >> API_STATUS.md
-          echo "Last successful check: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> API_STATUS.md
+          echo "Last check: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> API_STATUS.md
           echo "" >> API_STATUS.md
-          echo "Status: ✅ Available" >> API_STATUS.md
+          if [ "${{ steps.check.outcome }}" == "success" ]; then
+            echo "Status: ✅ Available" >> API_STATUS.md
+          else
+            echo "Status: ❌ Unavailable" >> API_STATUS.md
+          fi
           echo "" >> API_STATUS.md
           echo "This status is automatically updated by GitHub Actions." >> API_STATUS.md
 
       - name: Commit and Push
-        if: success()
+        if: always()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -48,5 +54,10 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "Update API status [skip ci]"
+            git pull --rebase --autostash
             git push
           fi
+
+      - name: Check Workflow Status
+        if: steps.check.outcome == 'failure'
+        run: exit 1
