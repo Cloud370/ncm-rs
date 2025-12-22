@@ -122,7 +122,8 @@ pub fn aes_decrypt(
             .len();
         String::from_utf8(buffer[..pt_len].to_vec())
             .map_err(|e| CryptoError::DecryptionError(e.to_string()))
-    } else if mode.eq_ignore_ascii_case("ecb") { // Explicit check for ECB
+    } else if mode.eq_ignore_ascii_case("ecb") {
+        // Explicit check for ECB
         let decryptor = Aes128EcbDec::new(key.into());
         let pt_len = decryptor
             .decrypt_padded_mut::<Pkcs7>(&mut buffer)
@@ -344,7 +345,7 @@ mod tests {
         let short_key = b"short";
         let valid_key = b"1234567812345678";
         let short_iv = b"short";
-        
+
         // Test short key (ECB)
         let res = aes_encrypt(text, "ecb", short_key, &[]);
         assert!(res.is_err());
@@ -356,7 +357,7 @@ mod tests {
         // Test short key (Decryption)
         let res = aes_decrypt(&[], short_key, &[], "ecb");
         assert!(res.is_err());
-        
+
         // Test short IV in CBC
         let res = aes_encrypt(text, "cbc", valid_key, short_iv);
         assert!(res.is_err());
