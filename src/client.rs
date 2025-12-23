@@ -2,7 +2,7 @@ use crate::error::NcmError;
 use crate::types::CryptoType;
 use crate::utils::crypto;
 use rand::Rng;
-use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE, REFERER, USER_AGENT};
+use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE, COOKIE, REFERER, USER_AGENT};
 use reqwest::{Client, Method, Proxy, Url};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -22,9 +22,9 @@ pub struct NcmClient {
 }
 
 impl NcmClient {
-    pub fn new(proxy: Option<&str>, timeout: u64) -> Result<Self, NcmError> {
+    pub fn new(proxy: Option<&str>, timeout: u64, cookie_store: bool) -> Result<Self, NcmError> {
         let mut builder = Client::builder()
-            .cookie_store(true)
+            .cookie_store(cookie_store)
             .gzip(true)
             .timeout(Duration::from_secs(timeout));
 
@@ -48,6 +48,7 @@ impl NcmClient {
         path: &str,
         params: Value,
         crypto_type: CryptoType,
+        cookies: Option<&str>,
     ) -> Result<Value, NcmError> {
         let mut params_to_encrypt = params.clone();
 
@@ -151,6 +152,12 @@ impl NcmClient {
             _ => USER_AGENT_PC,
         };
         headers.insert(USER_AGENT, HeaderValue::from_static(user_agent));
+
+        if let Some(cookie_str) = cookies {
+            if let Ok(val) = HeaderValue::from_str(cookie_str) {
+                headers.insert(COOKIE, val);
+            }
+        }
 
         if matches!(method, Method::POST) {
             headers.insert(
@@ -277,6 +284,7 @@ impl NcmClient {
 
 impl Default for NcmClient {
     fn default() -> Self {
-        Self::new(None, 30).expect("Failed to create default client")
+        // Default to enabling cookie store for library usage convenience
+        Self::new(None, 30, true).expect("Failed to create default client")
     }
 }

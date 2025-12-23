@@ -4,7 +4,7 @@ use serde_json::json;
 
 #[tokio::main]
 async fn main() {
-    let client = NcmClient::new(None, 30).expect("failed to create client");
+    let client = NcmClient::new(None, 30, true).expect("failed to create client");
 
     // Playlist Detail API
     // /weapi/v3/playlist/detail
@@ -28,6 +28,7 @@ async fn main() {
             "/weapi/v3/playlist/detail",
             params,
             CryptoType::Weapi,
+            None,
         )
         .await;
 

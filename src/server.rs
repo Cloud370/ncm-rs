@@ -32,6 +32,7 @@ pub struct ProxyRequest {
     pub crypto: Option<String>,
     pub retry: Option<u32>,
     pub timeout: Option<u64>,
+    pub cookie: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -52,7 +53,8 @@ pub fn create_app(state: Arc<AppState>) -> Router {
 }
 
 pub async fn run_server(port: u16, proxy: Option<String>, retry: u32, timeout: u64) {
-    let client = match NcmClient::new(proxy.as_deref(), timeout) {
+    // Disable cookie store for server mode to ensure statelessness
+    let client = match NcmClient::new(proxy.as_deref(), timeout, false) {
         Ok(client) => client,
         Err(e) => {
             tracing::error!("Failed to create client: {}", e);
@@ -113,10 +115,22 @@ async fn handle_wildcard(
     if let Some(v) = headers.get("X-NCM-Timeout").and_then(|v| v.to_str().ok()) {
         config.insert("timeout".to_string(), v.to_string());
     }
+    if let Some(v) = headers.get("Cookie").and_then(|v| v.to_str().ok()) {
+        config.insert("cookie".to_string(), v.to_string());
+    }
+    if let Some(v) = headers.get("X-NCM-Cookie").and_then(|v| v.to_str().ok()) {
+        config.insert("cookie".to_string(), v.to_string());
+    }
 
     // Query params processing
     for (k, v) in query_params {
-        if k == "crypto" || k == "proxy" || k == "real_ip" || k == "retry" || k == "timeout" {
+        if k == "crypto"
+            || k == "proxy"
+            || k == "real_ip"
+            || k == "retry"
+            || k == "timeout"
+            || k == "cookie"
+        {
             config.insert(k, v);
         } else {
             params_map.insert(k, Value::String(v));
@@ -139,6 +153,7 @@ async fn handle_wildcard(
                         || k == "target_url"
                         || k == "retry"
                         || k == "timeout"
+                        || k == "cookie"
                     {
                         if let Value::String(s) = v {
                             config.insert(k, s);
@@ -159,6 +174,7 @@ async fn handle_wildcard(
                         || k == "target_url"
                         || k == "retry"
                         || k == "timeout"
+                        || k == "cookie"
                     {
                         config.insert(k, v);
                     } else {
@@ -193,7 +209,7 @@ async fn handle_wildcard(
         .unwrap_or(state.default_timeout);
 
     let client = if let Some(proxy_url) = config.get("proxy") {
-        match NcmClient::new(Some(proxy_url), req_timeout) {
+        match NcmClient::new(Some(proxy_url), req_timeout, false) {
             Ok(c) => c,
             Err(e) => {
                 return Err((
@@ -205,7 +221,7 @@ async fn handle_wildcard(
             }
         }
     } else if req_timeout != state.default_timeout {
-        match NcmClient::new(None, req_timeout) {
+        match NcmClient::new(None, req_timeout, false) {
             Ok(c) => c,
             Err(e) => {
                 return Err((
@@ -249,6 +265,7 @@ async fn handle_wildcard(
                 &request_path,
                 Value::Object(params_map.clone()),
                 crypto_type,
+                config.get("cookie").map(|s| s.as_str()),
             )
             .await
         {
@@ -347,7 +364,7 @@ async fn handle_proxy(
     let req_timeout = payload.timeout.unwrap_or(state.default_timeout);
 
     let client = if req_timeout != state.default_timeout {
-        match NcmClient::new(None, req_timeout) {
+        match NcmClient::new(None, req_timeout, false) {
             Ok(c) => c,
             Err(e) => {
                 return Err((
@@ -366,7 +383,13 @@ async fn handle_proxy(
 
     loop {
         match client
-            .request(method.clone(), &payload.url, params.clone(), crypto_type)
+            .request(
+                method.clone(),
+                &payload.url,
+                params.clone(),
+                crypto_type,
+                payload.cookie.as_deref(),
+            )
             .await
         {
             Ok(res) => {

@@ -58,6 +58,7 @@ You can also configure request behavior using **HTTP Headers** or **Query Parame
 | `X-NCM-Network-Proxy` | `proxy` | Use a specific upstream network proxy (HTTP/SOCKS5) |
 | `X-NCM-Retry` | `retry` | Number of retries on failure |
 | `X-NCM-Timeout` | `timeout` | Request timeout in seconds |
+| `Cookie` / `X-NCM-Cookie` | `cookie` | Custom cookies |
 
 ### Structured Proxy Endpoint
 
@@ -74,7 +75,8 @@ curl -X POST http://localhost:3331/proxy \
         "s": "Fade",
         "type": 1,
         "limit": 3
-    }
+    },
+    "cookie": "MUSIC_U=..."
 }'
 ```
 
@@ -103,8 +105,8 @@ use serde_json::json;
 
 #[tokio::main]
 async fn main() {
-    // Initialize client (optional proxy, timeout in seconds)
-    let client = NcmClient::new(None, 30).unwrap();
+    // Initialize client (optional proxy, timeout in seconds, enable cookie store)
+    let client = NcmClient::new(None, 30, true).unwrap();
     
     // Make a search request using Weapi
     let res = client.request(

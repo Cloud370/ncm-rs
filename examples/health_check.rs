@@ -31,7 +31,7 @@ async fn main() {
 
 async fn check_api() -> bool {
     // Timeout set to 15 seconds
-    let client = match NcmClient::new(None, 15) {
+    let client = match NcmClient::new(None, 15, true) {
         Ok(c) => c,
         Err(e) => {
             eprintln!("Failed to create client: {}", e);
@@ -55,6 +55,7 @@ async fn check_api() -> bool {
             "/weapi/cloudsearch/pc",
             params,
             CryptoType::Auto,
+            None,
         )
         .await;
 

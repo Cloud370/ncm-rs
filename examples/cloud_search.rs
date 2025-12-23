@@ -5,7 +5,7 @@ use serde_json::json;
 #[tokio::main]
 async fn main() {
     // initialize client (optionally with proxy)
-    let client = NcmClient::new(None, 30).expect("failed to create client");
+    let client = NcmClient::new(None, 30, true).expect("failed to create client");
 
     // Cloud Search API
     // Source: .temp\api-enhanced\module\cloudsearch.js
@@ -31,6 +31,7 @@ async fn main() {
             "/weapi/cloudsearch/pc",
             params,
             CryptoType::Auto,
+            None,
         )
         .await;
 

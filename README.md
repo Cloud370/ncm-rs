@@ -58,6 +58,7 @@ curl "http://localhost:3331/weapi/search/get?s=Fade&type=1"
 | `X-NCM-Network-Proxy` | `proxy` | 使用特定的上游网络代理 (HTTP/SOCKS5) |
 | `X-NCM-Retry` | `retry` | 失败时的重试次数 |
 | `X-NCM-Timeout` | `timeout` | 请求超时时间（秒） |
+| `Cookie` / `X-NCM-Cookie` | `cookie` | 自定义 Cookie |
 
 ### 结构化代理端点
 
@@ -73,7 +74,8 @@ curl -X POST http://localhost:3331/proxy \
     "params": {
         "s": "Fade",
         "type": 1,
-        "limit": 3
+     ,
+    "cookie": "MUSIC_U=..."   "limit": 3
     }
 }'
 ```
@@ -103,8 +105,8 @@ use serde_json::json;
 
 #[tokio::main]
 async fn main() {
-    // 初始化客户端（可选代理，超时时间单位为秒）
-    let client = NcmClient::new(None, 30).unwrap();
+    // 初始化客户端（可选代理，超时时间单位为秒，是否开启 Cookie Store）
+    let client = NcmClient::new(None, 30, true).unwrap();
     
     // 使用 Weapi 发起搜索请求
     let res = client.request(
@@ -115,7 +117,8 @@ async fn main() {
             "type": 1,
             "limit": 5
         }),
-        CryptoType::Weapi
+        CryptoType::Weapi,
+        None // Cookie (可选)
     ).await;
 
     match res {
