@@ -42,6 +42,16 @@ impl NcmClient {
         })
     }
 
+    /// Construct a new NcmClient with a custom reqwest::Client.
+    /// This allows advanced configuration like persistent cookie stores, custom proxies, etc.
+    pub fn with_client(client: Client) -> Self {
+        Self {
+            client,
+            base_url: Url::parse(BASE_URL).unwrap(),
+            api_url: Url::parse(API_URL).unwrap(),
+        }
+    }
+
     pub async fn request(
         &self,
         method: Method,

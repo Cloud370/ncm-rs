@@ -128,12 +128,34 @@ async fn main() {
 }
 ```
 
+### 自定义 Client (高级用法)
+
+如果您需要更高级的配置（如持久化 Cookie、自定义 Header、TLS 设置等），可以构建自己的 `reqwest::Client` 并注入：
+
+```rust
+use ncm_rs::NcmClient;
+use reqwest::Client;
+use std::time::Duration;
+
+// 1. 构建自定义 reqwest Client
+let reqwest_client = Client::builder()
+    .user_agent("Your Custom User Agent")
+    .timeout(Duration::from_secs(15))
+    .cookie_store(true) // 启用 Cookie 存储
+    .build()
+    .unwrap();
+
+// 2. 使用自定义 Client 初始化 NcmClient
+let client = NcmClient::with_client(reqwest_client);
+```
+
 ### 更多示例
 
 详细示例可以在 [examples](./examples) 目录中找到：
 - [云端搜索](./examples/cloud_search.rs): 搜索歌曲、艺术家等。
 - [歌单详情](./examples/playlist_detail.rs): 获取歌单的完整详情。
 - [歌曲 URL](./examples/song_url.rs): 获取歌曲的下载/播放链接。
+- [自定义 Client](./examples/custom_client.rs): 演示如何注入自定义 reqwest client。
 
 ## 项目结构
 

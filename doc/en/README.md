@@ -127,12 +127,34 @@ async fn main() {
 }
 ```
 
+### Custom Client (Advanced Usage)
+
+If you need more advanced configuration (e.g., persistent cookies, custom headers, TLS settings), you can build your own `reqwest::Client` and inject it:
+
+```rust
+use ncm_rs::NcmClient;
+use reqwest::Client;
+use std::time::Duration;
+
+// 1. Build a custom reqwest Client
+let reqwest_client = Client::builder()
+    .user_agent("Your Custom User Agent")
+    .timeout(Duration::from_secs(15))
+    .cookie_store(true) // Enable cookie store
+    .build()
+    .unwrap();
+
+// 2. Initialize NcmClient with the custom client
+let client = NcmClient::with_client(reqwest_client);
+```
+
 ### More Examples
 
 Detailed examples can be found in the [examples](../../examples) directory:
 - [Cloud Search](../../examples/cloud_search.rs): Search for songs, artists, etc.
 - [Playlist Details](../../examples/playlist_detail.rs): Get full details of a playlist.
 - [Song URL](../../examples/song_url.rs): Get download/playback URLs for songs.
+- [Custom Client](../../examples/custom_client.rs): Demonstrates how to inject a custom reqwest client.
 
 ## Project Structure
 
